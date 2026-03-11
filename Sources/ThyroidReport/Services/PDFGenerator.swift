@@ -228,11 +228,11 @@ class PDFGenerator {
     }
 
     private static func checkPageBreak(ctx: UIGraphicsPDFRendererContext,
-                                        y: CGFloat, neededSpace: CGFloat) -> (UIGraphicsPDFRendererContext, CGFloat) {
-        if y + neededSpace > pageH - margin - 40 {
-            ctx.beginPage()
-            return (ctx, margin)
-        }
-        return (ctx, y)
+                                    y: CGFloat, neededSpace: CGFloat) -> CGFloat {
+    if y + neededSpace > pageH - margin - 40 {
+        ctx.beginPage()
+        return margin
     }
+    return y
+}
 }
