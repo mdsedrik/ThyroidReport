@@ -76,7 +76,7 @@ class PDFGenerator {
             // ─── Nodüller ─────────────────────────────────────────────────
             if !report.nodules.isEmpty {
                 y += 10
-                (ctx, y) = checkPageBreak(ctx: ctx, y: y, neededSpace: 60)
+                y = checkPageBreak(ctx: ctx, y: y, neededSpace: 60)
                 drawThinDivider(at: y); y += 12
                 y = drawSectionHeader("NODÜLLER", y: y); y += 10
 
@@ -115,12 +115,12 @@ class PDFGenerator {
             // ─── Lenf Nodları ─────────────────────────────────────────────
             if !report.lymphNodes.isEmpty {
                 y += 6
-                (ctx, y) = checkPageBreak(ctx: ctx, y: y, neededSpace: 60)
+                y = checkPageBreak(ctx: ctx, y: y, neededSpace: 60)
                 drawThinDivider(at: y); y += 12
                 y = drawSectionHeader("SERVİKAL LENF NODLARI", y: y); y += 10
 
                 for (i, node) in report.lymphNodes.enumerated() {
-                    (ctx, y) = checkPageBreak(ctx: ctx, y: y, neededSpace: 60)
+                   y = checkPageBreak(ctx: ctx, y: y, neededSpace: 60)
 
                     let bandRect = CGRect(x: margin - 6, y: y, width: contentW + 12, height: 22)
                     UIColor(red: 0.92, green: 0.96, blue: 0.92, alpha: 1).setFill()
