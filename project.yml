@@ -4,7 +4,8 @@ options:
   bundleIdPrefix: com.tiroidrapor
   deploymentTarget:
     iOS: "16.0"
-  xcodeVersion: "15"
+  xcodeVersion: "16.2"
+  xcodeCompatibilityVersion: "Xcode 14.0"
   createIntermediateGroups: true
 
 settings:
