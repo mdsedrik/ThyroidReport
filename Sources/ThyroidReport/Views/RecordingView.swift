@@ -149,7 +149,7 @@ struct RecordingView: View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "waveform")
                 .foregroundColor(.accentColor)
-                .symbolEffect(.variableColor.iterative)
+                .opacity(speechManager.isRecording ? 1.0 : 0.7)
             Text(speechManager.liveText)
                 .font(.system(size: 13, weight: .regular, design: .default))
                 .foregroundColor(.primary)
