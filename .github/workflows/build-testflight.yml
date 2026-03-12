@@ -164,7 +164,13 @@ jobs:
           --type ios \
           --file "$IPA_PATH" \
           --apiKey "$APP_STORE_CONNECT_KEY_ID" \
-          --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+          --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID" \
+          --verbose 2>&1 || \
+        xcrun notarytool submit "$IPA_PATH" \
+          --key ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8 \
+          --key-id "$APP_STORE_CONNECT_KEY_ID" \
+          --issuer "$APP_STORE_CONNECT_ISSUER_ID" \
+          --wait
     - name: Temizlik
       if: always()
       run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
