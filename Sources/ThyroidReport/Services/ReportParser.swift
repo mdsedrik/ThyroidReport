@@ -42,7 +42,6 @@ class ReportParser: ObservableObject {
             handlePatientName(raw: text, lower: lower)
 
         case .waitingMeasurements, .inNodule, .inLymphNode:
-            // Öncelik sırası: lenf nodu → nodül başlangıcı → ölçüm → devam
             if isLenfNoduBaslangici(lower) {
                 handleLymphNode(raw: text, lower: lower)
             } else if isNodülBaslangici(lower) {
@@ -76,7 +75,8 @@ class ReportParser: ObservableObject {
 
     private func isNodülBaslangici(_ lower: String) -> Bool {
         let locationWords = [
-            "sağ lob", "sol lob", "sag lob", "sol lob",
+            "sağ lob", "sol lob",
+            "sag lob", "sol lob",
             "anteriorda", "posteriorda", "lateralde", "medialde",
             "alt pol", "üst pol", "orta kesim", "alt polde", "üst polde",
             "istmusta", "istmus'ta"
@@ -121,7 +121,6 @@ class ReportParser: ObservableObject {
         saveToUndoStack()
         var name = raw
 
-        // "hasta adı ..." gibi ön ekleri temizle
         let prefixes = ["hasta adı", "hasta soyadı", "hasta:", "ad:", "isim:"]
         for prefix in prefixes {
             if lower.hasPrefix(prefix) {
@@ -194,14 +193,12 @@ class ReportParser: ObservableObject {
 
         let idx = report.nodules.count - 1
 
-        // TI-RADS skoru mu?
         if let tr = tiradsÇıkar(from: lower) {
             report.nodules[idx].tiradsScore = tr
             addFeedback("✅ Nodül \(idx + 1) TI-RADS: \(tr)", isSuccess: true)
             return
         }
 
-        // Açıklamaya ekle
         report.nodules[idx].description += " \(raw)"
         addFeedback("✅ Nodül \(idx + 1) açıklaması güncellendi.", isSuccess: true)
     }
@@ -228,7 +225,6 @@ class ReportParser: ObservableObject {
     // MARK: - Ayıklama Fonksiyonları
 
     private func çiftÖlçümÇıkar(from text: String) -> LobeSize? {
-        // Hem 3'lü hem de 2'li ölçümleri destekle
         let p3 = #"(\d+(?:[.,]\d+)?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)"#
         if let regex = try? NSRegularExpression(pattern: p3),
            let m = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) {
@@ -259,14 +255,12 @@ class ReportParser: ObservableObject {
     }
 
     private func lokasyonÇıkar(from text: String) -> String {
-        // Ölçüm başlamadan önceki kısmı al
         let pattern = #"\d+\s*[x×*]\s*\d+"#
         if let range = text.range(of: pattern, options: .regularExpression) {
             let location = String(text[..<range.lowerBound])
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             if !location.isEmpty { return location }
         }
-        // Ölçüm yoksa ilk 6 kelime
         return text.split(separator: " ").prefix(6).joined(separator: " ")
     }
 
@@ -292,7 +286,6 @@ class ReportParser: ObservableObject {
             addFeedback("⚠️ Geri alınacak işlem yok.", isSuccess: false)
         } else {
             report = undoStack.removeLast()
-            // State'i güncelle
             if !report.lymphNodes.isEmpty { parserState = .inLymphNode }
             else if !report.nodules.isEmpty { parserState = .inNodule }
             else if report.patientFirstName.isEmpty { parserState = .waitingPatientName }
