@@ -21,6 +21,7 @@ targets:
     sources:
       - path: Sources/ThyroidReport
       - path: Resources/Assets.xcassets
+      - path: Resources/AppIcons
     resources:
       - path: Resources/Info.plist
     info:
