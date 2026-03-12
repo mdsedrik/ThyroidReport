@@ -17,10 +17,10 @@ class SpeechManager: NSObject, ObservableObject {
     private var silenceTimer: Timer?
     private var lastTranscription = ""
     private var isRestarting = false
+    private let sessionQueue = DispatchQueue(label: "com.tiroidrapor.sessionQueue")
 
     override init() {
         super.init()
-        // Türkçe tanıyıcı - İngilizce tıbbi terimler de tanınır
         speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "tr-TR"))
         speechRecognizer?.delegate = self
         requestAuthorizations()
@@ -46,6 +46,7 @@ class SpeechManager: NSObject, ObservableObject {
     func startRecording() {
         guard canRecord else { return }
         guard !audioEngine.isRunning else { return }
+        guard !isRestarting else { return }
 
         do {
             try startRecognitionSession()
@@ -57,6 +58,7 @@ class SpeechManager: NSObject, ObservableObject {
     func stopRecording() {
         silenceTimer?.invalidate()
         silenceTimer = nil
+        isRestarting = false
 
         audioEngine.stop()
         audioEngine.inputNode.removeTap(onBus: 0)
@@ -89,7 +91,6 @@ class SpeechManager: NSObject, ObservableObject {
         guard let recognitionRequest = recognitionRequest else { return }
         recognitionRequest.shouldReportPartialResults = true
         recognitionRequest.requiresOnDeviceRecognition = false
-        // Tıbbi terimler için ipucu kelimeler
         recognitionRequest.contextualStrings = medicalHints()
 
         let inputNode = audioEngine.inputNode
@@ -125,7 +126,6 @@ class SpeechManager: NSObject, ObservableObject {
             }
 
             if let error = error as NSError? {
-                // Sessizlik sonu normal hata - yeniden başlat
                 if error.code == 1110 || error.code == 203 {
                     DispatchQueue.main.async {
                         if self.isRecording && !self.isRestarting {
@@ -173,12 +173,14 @@ class SpeechManager: NSObject, ObservableObject {
         recognitionTask = nil
         recognitionRequest = nil
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             guard let self = self else { return }
-            self.isRestarting = false
-            if self.isRecording {
-                try? self.startRecognitionSession()
+            guard self.isRecording else {
+                self.isRestarting = false
+                return
             }
+            self.isRestarting = false
+            try? self.startRecognitionSession()
         }
     }
 
