@@ -22,18 +22,13 @@ jobs:
     - name: XcodeGen Kur
       run: brew install xcodegen
 
-    - name: Xcode Projesi Oluştur
-      run: xcodegen generate
-      
     - name: Uygulama İkonu Oluştur
       run: |
         mkdir -p Resources/Assets.xcassets/AppIcon.appiconset
-        cat > Resources/Assets.xcassets/Contents.json << 'EOF'
-        {"info": {"author": "xcode", "version": 1}}
-        EOF
+        echo '{"info": {"author": "xcode", "version": 1}}' > Resources/Assets.xcassets/Contents.json
         python3 << 'PYEOF'
         from PIL import Image, ImageDraw, ImageFont
-        import json, os
+        import json
 
         sizes = [20,29,40,58,60,76,80,87,120,152,167,180,1024]
         out = "Resources/Assets.xcassets/AppIcon.appiconset"
@@ -77,6 +72,9 @@ jobs:
             json.dump(contents,f,indent=2)
         print("İkonlar hazır!")
         PYEOF
+
+    - name: Xcode Projesi Oluştur
+      run: xcodegen generate
 
     - name: Sertifika ve Profil Kur
       env:
@@ -148,7 +146,6 @@ jobs:
           -exportOptionsPlist $RUNNER_TEMP/ExportOptions.plist \
           -exportPath $RUNNER_TEMP/export \
           -allowProvisioningUpdates
-        echo "Export klasörü:"
         find $RUNNER_TEMP/export -type f
 
     - name: TestFlight'a Yükle
