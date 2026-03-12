@@ -127,18 +127,20 @@ jobs:
         mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
         cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
 
-    - name: Archive Oluştur
-      run: |
+     - name: Archive Oluştur
+       run: |
         xcodebuild archive \
           -project ThyroidReport.xcodeproj \
           -scheme ThyroidReport \
           -configuration Release \
+          -sdk iphoneos \
           -archivePath $RUNNER_TEMP/ThyroidReport.xcarchive \
           -destination "generic/platform=iOS" \
           CODE_SIGN_STYLE=Manual \
           PROVISIONING_PROFILE_SPECIFIER="${{ secrets.PROVISIONING_PROFILE_NAME }}" \
           CODE_SIGN_IDENTITY="iPhone Distribution" \
           DEVELOPMENT_TEAM="${{ secrets.TEAM_ID }}" \
+          EXCLUDED_ARCHS="" \
           -allowProvisioningUpdates
 
     - name: ExportOptions Oluştur
