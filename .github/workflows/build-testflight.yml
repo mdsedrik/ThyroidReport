@@ -24,6 +24,59 @@ jobs:
 
     - name: Xcode Projesi Oluştur
       run: xcodegen generate
+      
+    - name: Uygulama İkonu Oluştur
+      run: |
+        mkdir -p Resources/Assets.xcassets/AppIcon.appiconset
+        cat > Resources/Assets.xcassets/Contents.json << 'EOF'
+        {"info": {"author": "xcode", "version": 1}}
+        EOF
+        python3 << 'PYEOF'
+        from PIL import Image, ImageDraw, ImageFont
+        import json, os
+
+        sizes = [20,29,40,58,60,76,80,87,120,152,167,180,1024]
+        out = "Resources/Assets.xcassets/AppIcon.appiconset"
+
+        for s in sizes:
+            img = Image.new('RGB', (s,s), (13,71,161))
+            d = ImageDraw.Draw(img)
+            m = s*0.08
+            d.ellipse([m,m,s-m,s-m], fill=(25,118,210))
+            fs = int(s*0.55)
+            try:
+                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", fs)
+            except:
+                font = ImageFont.load_default()
+            bb = d.textbbox((0,0),"T",font=font)
+            x=(s-(bb[2]-bb[0]))/2-bb[0]; y=(s-(bb[3]-bb[1]))/2-bb[1]
+            d.text((x,y),"T",fill=(255,255,255),font=font)
+            img.save(f"{out}/icon_{s}.png")
+
+        contents = {"images":[
+            {"idiom":"iphone","scale":"2x","size":"20x20","filename":"icon_40.png"},
+            {"idiom":"iphone","scale":"3x","size":"20x20","filename":"icon_60.png"},
+            {"idiom":"iphone","scale":"2x","size":"29x29","filename":"icon_58.png"},
+            {"idiom":"iphone","scale":"3x","size":"29x29","filename":"icon_87.png"},
+            {"idiom":"iphone","scale":"2x","size":"40x40","filename":"icon_80.png"},
+            {"idiom":"iphone","scale":"3x","size":"40x40","filename":"icon_120.png"},
+            {"idiom":"iphone","scale":"2x","size":"60x60","filename":"icon_120.png"},
+            {"idiom":"iphone","scale":"3x","size":"60x60","filename":"icon_180.png"},
+            {"idiom":"ipad","scale":"1x","size":"20x20","filename":"icon_20.png"},
+            {"idiom":"ipad","scale":"2x","size":"20x20","filename":"icon_40.png"},
+            {"idiom":"ipad","scale":"1x","size":"29x29","filename":"icon_29.png"},
+            {"idiom":"ipad","scale":"2x","size":"29x29","filename":"icon_58.png"},
+            {"idiom":"ipad","scale":"1x","size":"40x40","filename":"icon_40.png"},
+            {"idiom":"ipad","scale":"2x","size":"40x40","filename":"icon_80.png"},
+            {"idiom":"ipad","scale":"1x","size":"76x76","filename":"icon_76.png"},
+            {"idiom":"ipad","scale":"2x","size":"76x76","filename":"icon_152.png"},
+            {"idiom":"ipad","scale":"2x","size":"83.5x83.5","filename":"icon_167.png"},
+            {"idiom":"ios-marketing","scale":"1x","size":"1024x1024","filename":"icon_1024.png"}
+        ],"info":{"author":"xcode","version":1}}
+        with open(f"{out}/Contents.json","w") as f:
+            json.dump(contents,f,indent=2)
+        print("İkonlar hazır!")
+        PYEOF
 
     - name: Sertifika ve Profil Kur
       env:
