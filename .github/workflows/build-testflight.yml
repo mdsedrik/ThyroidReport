@@ -1,81 +1,58 @@
 name: Build and Upload to TestFlight
-
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: macos-15
-
     steps:
-
-    - name: Kodu İndir
+    - name: Kodu Indir
       uses: actions/checkout@v4
-
-    - name: Xcode Seç
+    - name: Xcode Sec
       uses: maxim-lobanov/setup-xcode@v1
       with:
         xcode-version: '16.3'
-
     - name: XcodeGen Kur
       run: brew install xcodegen
-
-    - name: Uygulama İkonu Oluştur
+    - name: Uygulama Ikonu Olustur
       run: |
         mkdir -p Resources/Assets.xcassets/AppIcon.appiconset
         echo '{"info": {"author": "xcode", "version": 1}}' > Resources/Assets.xcassets/Contents.json
-
-        # 1024x1024 temel ikon oluştur (sips ile)
         BASE=/tmp/base_icon.png
         python3 -c "
-        import struct, zlib, base64
-
-        def png_chunk(name, data):
+        import struct, zlib
+        def chunk(name, data):
             c = zlib.crc32(name + data) & 0xffffffff
             return struct.pack('>I', len(data)) + name + data + struct.pack('>I', c)
-
         w, h = 1024, 1024
         raw = b''
         for y in range(h):
             raw += b'\x00'
             for x in range(w):
-                # Koyu mavi arka plan
                 cx, cy = w//2, h//2
                 dist = ((x-cx)**2 + (y-cy)**2) ** 0.5
                 if dist < w*0.42:
-                    # Açık mavi daire
-                    # T harfi bölgesi
                     tx1,tx2 = int(w*0.25), int(w*0.75)
                     ty1,ty2 = int(h*0.2), int(h*0.35)
                     bx1,bx2 = int(w*0.43), int(w*0.57)
                     by1,by2 = int(h*0.2), int(h*0.8)
                     if (ty1<=y<=ty2 and tx1<=x<=tx2) or (by1<=y<=by2 and bx1<=x<=bx2):
-                        raw += bytes([255,255,255,255])
+                        raw += bytes([255,255,255])
                     else:
-                        raw += bytes([25,118,210,255])
+                        raw += bytes([25,118,210])
                 else:
-                    raw += bytes([13,71,161,255])
-
+                    raw += bytes([13,71,161])
         ihdr = struct.pack('>IIBBBBB', w, h, 8, 2, 0, 0, 0)
         compressed = zlib.compress(raw)
-        data = (b'\x89PNG\r\n\x1a\n'
-                + png_chunk(b'IHDR', ihdr)
-                + png_chunk(b'IDAT', compressed)
-                + png_chunk(b'IEND', b''))
-        open('$BASE','wb').write(data)
-        print('Base icon created')
+        data = b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', ihdr) + chunk(b'IDAT', compressed) + chunk(b'IEND', b'')
+        open('/tmp/base_icon.png','wb').write(data)
         "
-
-        # Tüm boyutları sips ile oluştur
         OUT=Resources/Assets.xcassets/AppIcon.appiconset
         for SIZE in 20 29 40 58 60 76 80 87 120 152 167 180 1024; do
           sips -z $SIZE $SIZE $BASE --out $OUT/icon_${SIZE}.png > /dev/null
         done
-
-        # Contents.json yaz
-        cat > $OUT/Contents.json << 'EOF'
+        cat > $OUT/Contents.json << 'CEOF'
         {
           "images": [
             {"idiom":"iphone","scale":"2x","size":"20x20","filename":"icon_40.png"},
@@ -99,13 +76,10 @@ jobs:
           ],
           "info": {"author":"xcode","version":1}
         }
-        EOF
-        echo "İkonlar hazır!"
-        ls $OUT
-
-    - name: Xcode Projesi Oluştur
+        CEOF
+        echo "Ikonlar hazir"
+    - name: Xcode Projesi Olustur
       run: xcodegen generate
-
     - name: Sertifika ve Profil Kur
       env:
         BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
@@ -121,14 +95,12 @@ jobs:
         security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
         security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
         security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-        security import $CERTIFICATE_PATH -P "$P12_PASSWORD" \
-          -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+        security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
         security list-keychain -d user -s $KEYCHAIN_PATH
         mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
         cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
-
-     - name: Archive Oluştur
-       run: |
+    - name: Archive Olustur
+      run: |
         xcodebuild archive \
           -project ThyroidReport.xcodeproj \
           -scheme ThyroidReport \
@@ -142,8 +114,7 @@ jobs:
           DEVELOPMENT_TEAM="${{ secrets.TEAM_ID }}" \
           EXCLUDED_ARCHS="" \
           -allowProvisioningUpdates
-
-    - name: ExportOptions Oluştur
+    - name: ExportOptions Olustur
       run: |
         cat > $RUNNER_TEMP/ExportOptions.plist << EOF
         <?xml version="1.0" encoding="UTF-8"?>
@@ -170,8 +141,7 @@ jobs:
         </dict>
         </plist>
         EOF
-
-    - name: IPA Dışa Aktar
+    - name: IPA Disari Aktar
       run: |
         xcodebuild -exportArchive \
           -archivePath $RUNNER_TEMP/ThyroidReport.xcarchive \
@@ -179,8 +149,7 @@ jobs:
           -exportPath $RUNNER_TEMP/export \
           -allowProvisioningUpdates
         find $RUNNER_TEMP/export -type f
-
-    - name: TestFlight'a Yükle
+    - name: TestFlight Yukle
       env:
         APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
         APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
@@ -196,8 +165,6 @@ jobs:
           --file "$IPA_PATH" \
           --apiKey "$APP_STORE_CONNECT_KEY_ID" \
           --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
-
     - name: Temizlik
       if: always()
-      run: |
-        security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
+      run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
