@@ -26,29 +26,58 @@ jobs:
       run: |
         mkdir -p Resources/Assets.xcassets/AppIcon.appiconset
         echo '{"info": {"author": "xcode", "version": 1}}' > Resources/Assets.xcassets/Contents.json
-        python3 << 'PYEOF'
-        from PIL import Image, ImageDraw, ImageFont
-        import json
 
-        sizes = [20,29,40,58,60,76,80,87,120,152,167,180,1024]
-        out = "Resources/Assets.xcassets/AppIcon.appiconset"
+        # 1024x1024 temel ikon oluştur (sips ile)
+        BASE=/tmp/base_icon.png
+        python3 -c "
+        import struct, zlib, base64
 
-        for s in sizes:
-            img = Image.new('RGB', (s,s), (13,71,161))
-            d = ImageDraw.Draw(img)
-            m = s*0.08
-            d.ellipse([m,m,s-m,s-m], fill=(25,118,210))
-            fs = int(s*0.55)
-            try:
-                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", fs)
-            except:
-                font = ImageFont.load_default()
-            bb = d.textbbox((0,0),"T",font=font)
-            x=(s-(bb[2]-bb[0]))/2-bb[0]; y=(s-(bb[3]-bb[1]))/2-bb[1]
-            d.text((x,y),"T",fill=(255,255,255),font=font)
-            img.save(f"{out}/icon_{s}.png")
+        def png_chunk(name, data):
+            c = zlib.crc32(name + data) & 0xffffffff
+            return struct.pack('>I', len(data)) + name + data + struct.pack('>I', c)
 
-        contents = {"images":[
+        w, h = 1024, 1024
+        raw = b''
+        for y in range(h):
+            raw += b'\x00'
+            for x in range(w):
+                # Koyu mavi arka plan
+                cx, cy = w//2, h//2
+                dist = ((x-cx)**2 + (y-cy)**2) ** 0.5
+                if dist < w*0.42:
+                    # Açık mavi daire
+                    # T harfi bölgesi
+                    tx1,tx2 = int(w*0.25), int(w*0.75)
+                    ty1,ty2 = int(h*0.2), int(h*0.35)
+                    bx1,bx2 = int(w*0.43), int(w*0.57)
+                    by1,by2 = int(h*0.2), int(h*0.8)
+                    if (ty1<=y<=ty2 and tx1<=x<=tx2) or (by1<=y<=by2 and bx1<=x<=bx2):
+                        raw += bytes([255,255,255,255])
+                    else:
+                        raw += bytes([25,118,210,255])
+                else:
+                    raw += bytes([13,71,161,255])
+
+        ihdr = struct.pack('>IIBBBBB', w, h, 8, 2, 0, 0, 0)
+        compressed = zlib.compress(raw)
+        data = (b'\x89PNG\r\n\x1a\n'
+                + png_chunk(b'IHDR', ihdr)
+                + png_chunk(b'IDAT', compressed)
+                + png_chunk(b'IEND', b''))
+        open('$BASE','wb').write(data)
+        print('Base icon created')
+        "
+
+        # Tüm boyutları sips ile oluştur
+        OUT=Resources/Assets.xcassets/AppIcon.appiconset
+        for SIZE in 20 29 40 58 60 76 80 87 120 152 167 180 1024; do
+          sips -z $SIZE $SIZE $BASE --out $OUT/icon_${SIZE}.png > /dev/null
+        done
+
+        # Contents.json yaz
+        cat > $OUT/Contents.json << 'EOF'
+        {
+          "images": [
             {"idiom":"iphone","scale":"2x","size":"20x20","filename":"icon_40.png"},
             {"idiom":"iphone","scale":"3x","size":"20x20","filename":"icon_60.png"},
             {"idiom":"iphone","scale":"2x","size":"29x29","filename":"icon_58.png"},
@@ -67,11 +96,12 @@ jobs:
             {"idiom":"ipad","scale":"2x","size":"76x76","filename":"icon_152.png"},
             {"idiom":"ipad","scale":"2x","size":"83.5x83.5","filename":"icon_167.png"},
             {"idiom":"ios-marketing","scale":"1x","size":"1024x1024","filename":"icon_1024.png"}
-        ],"info":{"author":"xcode","version":1}}
-        with open(f"{out}/Contents.json","w") as f:
-            json.dump(contents,f,indent=2)
-        print("İkonlar hazır!")
-        PYEOF
+          ],
+          "info": {"author":"xcode","version":1}
+        }
+        EOF
+        echo "İkonlar hazır!"
+        ls $OUT
 
     - name: Xcode Projesi Oluştur
       run: xcodegen generate
