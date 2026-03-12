@@ -19,8 +19,6 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>UILaunchStoryboardName</key>
-    <key>CFBundleIconName</key>
-    <string>AppIcon</string>
     <string>LaunchScreen</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Tiroid ultrason bulgularını sesle girmek için mikrofon erişimi gereklidir.</string>
